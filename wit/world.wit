@@ -1,0 +1,17 @@
+package fallow:midden;
+
+world calculator {
+	record point {
+		x: s32,
+		y: s32,
+	}
+
+	record calculation-result {
+		sum: point,
+		distance: f64,
+	}
+
+	export add-points: func(a: point, b: point) -> point;
+	export calculate: func(a: point, b: point) -> calculation-result;
+	export get-origin: func() -> point;
+}
