@@ -2,9 +2,119 @@
 ///|
 pub(all) struct Point {
       x : Int; y : Int
-} derive(Show, Eq)
+} derive()
 ///|
 pub(all) struct CalculationResult {
       sum : Point; distance : Double
-} derive(Show, Eq)
+} derive()
+///|
+pub(all) enum LogLevel {
+      TRACE; DEBUG; INFO; WARN; ERROR
+} derive()
+
+pub fn LogLevel::ordinal(self : LogLevel) -> Int {
+      match self {
+            TRACE => 0
+            DEBUG => 1
+            INFO => 2
+            WARN => 3
+            ERROR => 4
+      }
+}
+
+pub fn LogLevel::from(self : Int) -> LogLevel {
+      match self {
+            0 => TRACE
+            1 => DEBUG
+            2 => INFO
+            3 => WARN
+            4 => ERROR
+            _ => panic()
+      }
+}
+///|
+pub(all) struct SpawnParams {
+      kind : String; pos : Point
+} derive()
+///|
+pub(all) struct ChatEvent {
+      origin : UInt64; message : String
+} derive()
+///|
+pub(all) struct CollisionEvent {
+      a : UInt64; b : UInt64
+} derive()
+///|
+pub(all) enum Event {
+      Tick(Float)
+      Chat(ChatEvent)
+      Collision(CollisionEvent)
+} derive()
+///|
+pub fn log(level : LogLevel, message : String) -> Unit {
+
+      let ptr = mbt_ffi_str2ptr(message)
+      wasmImportLog(level.ordinal(), ptr, message.length());
+      mbt_ffi_free(ptr)
+
+}
+///|
+pub fn delta_seconds() -> Float {
+
+      let result : Float =  wasmImportDeltaSeconds();
+      return result
+
+}
+///|
+pub fn time_ms() -> UInt64 {
+
+      let result : Int64 =  wasmImportTimeMs();
+      return (result).reinterpret_as_uint64()
+
+}
+///|
+pub fn random_u32() -> UInt {
+
+      let result : Int =  wasmImportRandomU32();
+      return (result).reinterpret_as_uint()
+
+}
+///|
+pub fn spawn(params : SpawnParams) -> UInt64 {
+
+      let ptr = mbt_ffi_str2ptr((params).kind)
+      let result : Int64 =  wasmImportSpawn(ptr, (params).kind.length(), ((params).pos).x, ((params).pos).y);
+      mbt_ffi_free(ptr)
+      return (result).reinterpret_as_uint64()
+
+}
+///|
+pub fn despawn(e : UInt64) -> Unit {
+
+      wasmImportDespawn((e).reinterpret_as_int64());
+
+}
+///|
+pub fn get_position(e : UInt64) -> Point {
+
+      let return_area = mbt_ffi_malloc(8)
+      wasmImportGetPosition((e).reinterpret_as_int64(), return_area);
+      mbt_ffi_free(return_area)
+      return Point::{x : mbt_ffi_load32((return_area) + 0), y : mbt_ffi_load32((return_area) + 4)}
+
+}
+///|
+pub fn set_position(e : UInt64, pos : Point) -> Unit {
+
+      wasmImportSetPosition((e).reinterpret_as_int64(), (pos).x, (pos).y);
+
+}
+///|
+pub fn play_sound(name : String, volume : Float) -> Unit {
+
+      let ptr = mbt_ffi_str2ptr(name)
+      wasmImportPlaySound(ptr, name.length(), volume);
+      mbt_ffi_free(ptr)
+
+}
 

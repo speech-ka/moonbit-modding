@@ -1,0 +1,13 @@
+[toolchain]
+	channel = "nightly"
+	components = [
+		"rust-std",
+	]
+
+[build]
+	rustflags = [
+		"-Z",
+		"-Z",
+		"build-std-features=panic_immediate_abort",
+		"build-std=std,panic_abort",
+	]

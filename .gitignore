@@ -2,3 +2,5 @@ target
 **/target
 **/*.wasm
 **/_build
+.idea
+.cargo/config.toml

@@ -1,0 +1,33 @@
+[unstable]
+codegen-backend = true
+rustc-unicode = true
+
+[profile]
+incremental = true
+
+[profile.dev]
+#codegen-backend = "cranelift"
+debug = "line-tables-only"
+
+[profile.release]
+codegen-backend = "llvm"
+
+[profile.web]
+codegen-backend = "llvm"
+
+[target.x86_64-unknown-linux-gnu]
+linker = "clang"
+rustflags = [
+	"-C", "link-arg=-fuse-ld=mold",
+	"-Z", "share-generics=y",
+	"-Z", "threads=8"
+]
+
+[target.wasm32-unknown-unknown]
+rustflags = [
+	'--cfg', 'getrandom_backend="wasm_js"',
+	"--cfg", "web_sys_unstable_apis",
+	"-C", "target-feature=+sign-ext,+nontrapping-fptoint",
+	"-Z", "share-generics=y",
+	"-Z", "threads=8",
+]

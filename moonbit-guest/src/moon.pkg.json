@@ -1,0 +1,5 @@
+{
+	"import": [
+		{ "path": "fallow/midden/world/calculator", "alias": "calculator" }
+	]
+}

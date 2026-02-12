@@ -1,0 +1,11 @@
+@build:
+    moon build --target wasm --release
+    wasm-tools component embed                     \
+        --world calculator                         \
+        ./wit                                      \
+        _build/wasm/release/build/gen/gen.wasm     \
+        --encoding utf16                           \
+        -o embedded.wasm
+    wasm-tools component new                       \
+            embedded.wasm                          \
+        -o component.wasm
