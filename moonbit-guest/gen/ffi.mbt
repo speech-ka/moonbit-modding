@@ -27,7 +27,9 @@ dst_size : Int,
 extern "wasm" fn mbt_ffi_copy(dest : Int, src : Int, len : Int) =
 #|(func (param i32) (param i32) (param i32) local.get 0 local.get 1 local.get 2 memory.copy)
 
-let return_area : Int = mbt_ffi_malloc(16)
+///|
+extern "wasm" fn mbt_ffi_free(position : Int) =
+#|(func (param i32) local.get 0 i32.const 8 i32.sub call $moonbit.decref)
 
 ///|
 extern "wasm" fn mbt_ffi_malloc(size : Int) -> Int =
@@ -35,23 +37,4 @@ extern "wasm" fn mbt_ffi_malloc(size : Int) -> Int =
 #| local.get 0 i32.const 4 i32.add call $moonbit.gc.malloc
 #| local.tee 1 i32.const 0 call $moonbit.init_array8
 #| local.get 1 i32.const 8 i32.add)
-
-///|
-extern "wasm" fn mbt_ffi_store32(offset : Int, value : Int) =
-#|(func (param i32) (param i32) local.get 0 local.get 1 i32.store)
-
-///|
-extern "wasm" fn mbt_ffi_ptr2str(ptr : Int, len : Int) -> String =
-#|(func (param i32) (param i32) (result i32) (local i32)
-#| local.get 0 i32.const 8 i32.sub local.tee 2
-#| local.get 1 call $moonbit.init_array16
-#| local.get 2)
-
-///|
-extern "wasm" fn mbt_ffi_storef64(offset : Int, value : Double) =
-#|(func (param i32) (param f64) local.get 0 local.get 1 f64.store)
-
-///|
-extern "wasm" fn mbt_ffi_free(position : Int) =
-#|(func (param i32) local.get 0 i32.const 8 i32.sub call $moonbit.decref)
 

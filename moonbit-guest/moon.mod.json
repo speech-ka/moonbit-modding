@@ -1,1 +1,4 @@
-{ "name": "fallow/midden", "preferred-target": "wasm" }
+{
+	"name": "fallow/midden",
+	"preferred-target": "wasm"
+}

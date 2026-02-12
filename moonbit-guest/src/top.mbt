@@ -1,12 +1,7 @@
-///|
 pub fn on_load() -> Unit {
-	@calculator.log(
-		@calculator.LogLevel::info,
-		"mod loaded"
-	)
+  @log.log(@log.Level::INFO, "mod", "mod loaded")
 }
 
-///|
 pub fn on_update(dt : Float) -> Unit {
-	let _ = dt
+  @log.log(@log.Level::INFO, "mod", "dt=\{dt}")
 }

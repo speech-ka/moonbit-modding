@@ -1,7 +1,10 @@
+@regenerate:
+    wit-bindgen moonbit --out-dir . ./wit
+
 @build:
     moon build --target wasm --release
     wasm-tools component embed                     \
-        --world calculator                         \
+        --world fortalice                          \
         ./wit                                      \
         _build/wasm/release/build/gen/gen.wasm     \
         --encoding utf16                           \
@@ -9,3 +12,7 @@
     wasm-tools component new                       \
             embedded.wasm                          \
         -o component.wasm
+
+[working-directory: '../']
+@see-the-logs $RUST_LOG="info":
+	cargo run

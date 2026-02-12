@@ -1,70 +1,21 @@
 package fallow:midden;
 
-world calculator {
+interface krenel {
 	record point {
 		x: s32,
-		y: s32,
+		y: s32
 	}
 
-	record calculation-result {
-		sum: point,
-		distance: f64,
+	resource actor {
+		get-position: func() -> point;
+		set-position: func(pos: point);
 	}
 
-	type entity = u64;
+	spawn: func(kind: string, pos: point) -> actor;
+}
 
-	enum log-level {
-		trace,
-		debug,
-		info,
-		warn,
-		error,
-	}
-
-	record spawn-params {
-		kind: string,
-		pos: point,
-	}
-
-	record chat-event {
-		origin: entity,
-		message: string,
-	}
-
-	record collision-event {
-		a: entity,
-		b: entity,
-	}
-
-	variant event {
-		tick(f32),
-		chat(chat-event),
-		collision(collision-event),
-	}
-
-	import log: func(level: log-level, message: string);
-
-	import delta-seconds: func() -> f32;
-	import time-ms: func() -> u64;
-
-	import random-u32: func() -> u32;
-
-	import spawn: func(params: spawn-params) -> entity;
-	import despawn: func(e: entity);
-
-	import get-position: func(e: entity) -> point;
-	import set-position: func(e: entity, pos: point);
-
-	import play-sound: func(name: string, volume: f32);
-
-	export on-load: func();
-	export on-unload: func();
-
+world fortalice {
+	import krenel;
+	import wasi:logging/logging@0.1.0;
 	export on-update: func(dt: f32);
-
-	export on-event: func(e: event);
-
-	export add-points: func(a: point, b: point) -> point;
-	export calculate: func(a: point, b: point) -> calculation-result;
-	export get-origin: func() -> point;
 }

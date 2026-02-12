@@ -1,5 +1,12 @@
 {
 	"import": [
-		{ "path": "fallow/midden/world/calculator", "alias": "calculator" }
+		{
+			"path": "fallow/midden/interface/fallow/midden/krenel",
+			"alias": "krenel"
+		},
+		{
+			"path": "fallow/midden/interface/wasi/logging/logging",
+			"alias": "log"
+		}
 	]
 }
