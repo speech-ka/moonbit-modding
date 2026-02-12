@@ -7,9 +7,9 @@ use crate::{
 	asset_mod_metadata::ModMetaData,
 	asset_wasm_binary::WasmBinary,
 	wasm_engine::{
-		make_wasm_engine,
 		Fortalice,
 		WasmEngine,
+		make_wasm_engine,
 	},
 };
 
@@ -87,7 +87,7 @@ fn load_mods(
 				let mod_metadata = mod_metadata_assets.remove(&provisional_mod.mod_metadata)?;
 				let component = Component::from_binary(
 					engine,
-					&*(wasm_binary.0),
+					&(wasm_binary.0),
 				)
 				.ok()?;
 				let bindings = Fortalice::instantiate(

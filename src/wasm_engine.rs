@@ -1,16 +1,16 @@
 use anyhow::Result;
 use bevy::prelude::*;
 use wasmtime::{
+	Config,
+	Engine,
+	Store,
 	component::{
-		bindgen,
 		HasSelf,
 		Linker,
 		Resource as WasmtimeResource,
 		ResourceTable,
+		bindgen,
 	},
-	Config,
-	Engine,
-	Store,
 };
 
 bindgen!({
@@ -28,7 +28,7 @@ bindgen!({
 		"fallow:midden/krenel.spawn": trappable,
 	},*/
 });
-use crate::{
+use crate::wasm_engine::{
 	fallow::midden::krenel::{
 		Host as KrenelHost,
 		HostActor,
@@ -47,7 +47,7 @@ pub struct Actor {
 }
 
 #[derive(Default)]
-struct HostState {
+pub struct HostState {
 	table: ResourceTable,
 }
 
@@ -93,9 +93,9 @@ impl WasiLoggingHost for HostState {
 }
 
 pub struct WasmEngine {
-	engine: Engine,
-	linker: Linker<HostState>,
-	store: Store<HostState>,
+	pub engine: Engine,
+	pub linker: Linker<HostState>,
+	pub store: Store<HostState>,
 }
 
 pub fn make_wasm_engine() -> Result<WasmEngine> {

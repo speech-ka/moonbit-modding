@@ -1,4 +1,5 @@
 mod asset_mod_metadata;
+mod asset_tracking;
 mod asset_wasm_binary;
 mod load_mods;
 mod wasm_engine;
@@ -14,7 +15,8 @@ fn main() -> AppExit {
 	env_logger::init();
 	App::new()
 		.add_plugins(DefaultPlugins)
-		.add_plugins(crate::load_mods::plugin)
+		.add_plugins(asset_tracking::plugin)
+		.add_plugins(load_mods::plugin)
 		.run()
 }
 
