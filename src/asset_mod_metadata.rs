@@ -1,14 +1,19 @@
 use bevy::{
 	asset::{
-		io::Reader,
 		AssetLoader,
 		AsyncReadExt,
 		LoadContext,
+		io::Reader,
 	},
 	prelude::*,
 };
 use serde::Deserialize;
 use thiserror::Error;
+
+pub fn plugin(app: &mut App) {
+	app.init_asset_loader::<ModMetaDataLoader>()
+		.init_asset::<ModMetaData>();
+}
 
 #[derive(Asset, TypePath, Deserialize)]
 pub struct ModMetaData {

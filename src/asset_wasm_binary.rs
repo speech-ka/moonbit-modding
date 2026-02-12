@@ -1,12 +1,17 @@
 use bevy::{
 	asset::{
-		io::Reader,
 		AssetLoader,
 		LoadContext,
+		io::Reader,
 	},
 	prelude::*,
 };
 use thiserror::Error;
+
+pub fn plugin(app: &mut App) {
+	app.init_asset_loader::<WasmBinaryLoader>()
+		.init_asset::<WasmBinary>();
+}
 
 #[derive(Asset, TypePath, Debug)]
 pub struct WasmBinary(pub(crate) Vec<u8>);

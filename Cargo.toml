@@ -6,8 +6,6 @@ edition = "2024"
 [dependencies]
 wasmtime = "41.0.3"
 anyhow = "1.0"
-env_logger = "0.11.9"
-log = "0.4.29"
 thiserror = "2.0.18"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_dhall = "0.13.0"
@@ -30,7 +28,7 @@ bevy = { version = "0.18", default-features = false, features = [
 	"png",
 	"tonemapping_luts",
 	"vorbis",
-	"x11",
+	"wayland",
 	"debug",
 	"bevy_debug_stepping",
 	"bevy_dev_tools",
@@ -39,4 +37,11 @@ bevy = { version = "0.18", default-features = false, features = [
 	"dynamic_linking",
 	"track_location",
 	"file_watcher",
+	"bevy_gilrs",
+	"bevy_winit",
+	"default_font",
+	"multi_threaded",
+	"std",
+	"zstd_rust",
+	"sysinfo_plugin",
 ] }

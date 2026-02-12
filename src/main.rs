@@ -12,11 +12,18 @@ use crate::{
 };
 
 fn main() -> AppExit {
-	env_logger::init();
 	App::new()
 		.add_plugins(DefaultPlugins)
 		.add_plugins(asset_tracking::plugin)
+		.add_plugins((
+			asset_mod_metadata::plugin,
+			asset_wasm_binary::plugin,
+		))
 		.add_plugins(load_mods::plugin)
+		.add_systems(
+			Update,
+			update_mods.run_if(resource_exists::<Mods>),
+		)
 		.run()
 }
 

@@ -82,12 +82,12 @@ impl KrenelHost for HostState {
 impl WasiLoggingHost for HostState {
 	fn log(&mut self, level: WasiLogLevel, context: String, message: String) {
 		match level {
-			WasiLogLevel::Trace => log::trace!("[{context}] {message}"),
-			WasiLogLevel::Debug => log::debug!("[{context}] {message}"),
-			WasiLogLevel::Info => log::info!("[{context}] {message}"),
-			WasiLogLevel::Warn => log::warn!("[{context}] {message}"),
-			WasiLogLevel::Error => log::error!("[{context}] {message}"),
-			WasiLogLevel::Critical => log::error!("[CRITICAL][{context}] {message}"),
+			WasiLogLevel::Trace => trace!("[{context}] {message}"),
+			WasiLogLevel::Debug => debug!("[{context}] {message}"),
+			WasiLogLevel::Info => info!("[{context}] {message}"),
+			WasiLogLevel::Warn => warn!("[{context}] {message}"),
+			WasiLogLevel::Error => error!("[{context}] {message}"),
+			WasiLogLevel::Critical => error!("[CRITICAL][{context}] {message}"),
 		}
 	}
 }

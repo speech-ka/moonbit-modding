@@ -15,9 +15,10 @@
     wasm-tools component new                       \
             embedded.wasm                          \
         -o component.wasm
-    mkdir -p ../mods/fortalice
-    cp component.wasm ../mods/fortalice/component.wasm
-    cp ./src/mod.dhall ../mods/fortalice/mod.dhall
+    rm -rf ../assets/mods/fortalice
+    mkdir -p ../assets/mods/fortalice
+    cp component.wasm ../assets/mods/fortalice/component.wasm
+    cp ./src/@mod.dhall ../assets/mods/fortalice/@mod.dhall
 
 [working-directory('../')]
 @see-the-logs $RUST_LOG="info":

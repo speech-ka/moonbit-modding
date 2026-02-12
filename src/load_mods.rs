@@ -5,6 +5,7 @@ use wasmtime::component::Component;
 
 use crate::{
 	asset_mod_metadata::ModMetaData,
+	asset_tracking::LoadResource,
 	asset_wasm_binary::WasmBinary,
 	wasm_engine::{
 		Fortalice,
@@ -14,47 +15,37 @@ use crate::{
 };
 
 pub fn plugin(app: &mut App) {
-	app.add_systems(
-		PreStartup,
-		(
+	app.load_resource::<ProvisionalMods>()
+		.add_systems(
+			PreStartup,
 			create_wasm_engine,
-			load_provisional_mods,
-			load_mods,
 		)
-			.chain(),
-	);
+		.add_systems(
+			Update,
+			load_mods.run_if(resource_exists::<ProvisionalMods>),
+		);
 }
 
-#[derive(Resource)]
+#[derive(Asset, Resource, Reflect, Clone)]
 struct ProvisionalMods(pub Vec<ProvisionalMod>);
 
+#[derive(Reflect, Clone)]
 struct ProvisionalMod {
 	wasm_binary: Handle<WasmBinary>,
 	mod_metadata: Handle<ModMetaData>,
 }
 
-#[derive(Resource)]
-pub struct Mods(pub Vec<Mod>);
-
-pub struct Mod {
-	pub(crate) bindings: Fortalice,
-	pub(crate) mod_metadata: ModMetaData,
-}
-
-fn create_wasm_engine(world: &mut World) {
-	world.insert_non_send_resource(make_wasm_engine().unwrap())
-}
-
-fn load_provisional_mods(mut commands: Commands, asset_server: Res<AssetServer>) {
-	let mod_names = get_mod_names().unwrap_or(Vec::new());
-	commands.insert_resource(
-		ProvisionalMods(
+impl FromWorld for ProvisionalMods {
+	fn from_world(world: &mut World) -> Self {
+		let asset_server = world.resource::<AssetServer>();
+		let mod_names = get_mod_names().unwrap_or(Vec::new());
+		Self(
 			mod_names
 				.iter()
 				.map(
 					|mod_name| {
 						let wasm_binary = asset_server.load(format!("mods/{mod_name}/component.wasm"));
-						let mod_metadata = asset_server.load(format!("mods/{mod_name}/mod.dhall"));
+						let mod_metadata = asset_server.load(format!("mods/{mod_name}/@mod.dhall"));
 						ProvisionalMod {
 							wasm_binary,
 							mod_metadata,
@@ -62,8 +53,20 @@ fn load_provisional_mods(mut commands: Commands, asset_server: Res<AssetServer>)
 					},
 				)
 				.collect(),
-		),
-	)
+		)
+	}
+}
+
+#[derive(Resource)]
+pub struct Mods(pub Vec<Mod>);
+
+pub struct Mod {
+	pub bindings: Fortalice,
+	pub mod_metadata: ModMetaData,
+}
+
+fn create_wasm_engine(world: &mut World) {
+	world.insert_non_send_resource(make_wasm_engine().unwrap())
 }
 
 fn load_mods(
@@ -104,11 +107,12 @@ fn load_mods(
 		)
 		.collect();
 	commands.remove_resource::<ProvisionalMods>();
+	commands.insert_resource(Mods(mods));
 }
 
 pub fn get_mod_names() -> Result<Vec<String>> {
 	Ok(
-		fs::read_dir("./mods")?
+		fs::read_dir("./assets/mods")?
 			.filter_map(
 				|entry| {
 					let entry = entry.ok()?;
