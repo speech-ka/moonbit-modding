@@ -1,0 +1,18 @@
+import {
+  "fallow/midden/gen/world/fortalice" @fortalice,
+}
+
+warnings = "-44"
+
+options(
+  link: {
+    "wasm": {
+      "export-memory-name": "memory",
+      "exports": [
+        "mbt_ffi_cabi_realloc:cabi_realloc",
+        "wasmExportOnUpdate:on-update",
+      ],
+      "heap-start-address": 16,
+    },
+  },
+)

@@ -4,22 +4,28 @@
 @build-watch: build
     watchexec -w src just build
 
-@build:
+@build: fmt-moon fmt-cargo
     moon build --target wasm --release
-    wasm-tools component embed                     \
-        --world fortalice                          \
-        ./wit                                      \
-        _build/wasm/release/build/gen/gen.wasm     \
-        --encoding utf16                           \
+
+    wasm-tools component embed                 \
+        --world fortalice                      \
+        ./wit                                  \
+        _build/wasm/release/build/gen/gen.wasm \
+        --encoding utf16                       \
         -o embedded.wasm
-    wasm-tools component new                       \
-            embedded.wasm                          \
+
+    wasm-tools component new                   \
+            embedded.wasm                      \
         -o component.wasm
+
     rm -rf ../assets/mods/fortalice
     mkdir -p ../assets/mods/fortalice
     cp component.wasm ../assets/mods/fortalice/component.wasm
     cp ./src/@mod.dhall ../assets/mods/fortalice/@mod.dhall
 
+@fmt-moon:
+    moon fmt
+
 [working-directory('../')]
-@see-the-logs $RUST_LOG="info":
-    cargo run
+@fmt-cargo:
+    cargo fmt

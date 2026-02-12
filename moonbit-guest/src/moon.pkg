@@ -1,0 +1,4 @@
+import {
+  "fallow/midden/interface/fallow/midden/krenel" @krenel,
+  "fallow/midden/interface/wasi/logging/logging" @log,
+}

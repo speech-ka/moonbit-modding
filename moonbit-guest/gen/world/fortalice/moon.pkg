@@ -1,0 +1,5 @@
+import {
+  "fallow/midden/src" @src,
+}
+
+warnings = "-44"
