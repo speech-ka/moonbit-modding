@@ -1,6 +1,9 @@
 @regenerate:
     wit-bindgen moonbit --out-dir . ./wit
 
+@build-watch: build
+    watchexec -w src just build
+
 @build:
     moon build --target wasm --release
     wasm-tools component embed                     \
@@ -12,7 +15,10 @@
     wasm-tools component new                       \
             embedded.wasm                          \
         -o component.wasm
+    mkdir -p ../mods/fortalice
+    cp component.wasm ../mods/fortalice/component.wasm
+    cp ./src/mod.dhall ../mods/fortalice/mod.dhall
 
-[working-directory: '../']
+[working-directory('../')]
 @see-the-logs $RUST_LOG="info":
-	cargo run
+    cargo run
