@@ -18,7 +18,7 @@ pub fn plugin(app: &mut App) {
 #[derive(Asset, TypePath, Deserialize)]
 pub struct ModMetaData {
 	pub(crate) name: String,
-	description: String,
+	pub(crate) description: String,
 }
 
 #[derive(Default, TypePath)]

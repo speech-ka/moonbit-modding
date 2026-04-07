@@ -44,7 +44,8 @@ impl FromWorld for ProvisionalMods {
 				.iter()
 				.map(
 					|mod_name| {
-						let wasm_binary = asset_server.load(format!("mods/{mod_name}/component.wasm"));
+						// TODO: handle errors when files are not found or are bad
+						let wasm_binary = asset_server.load(format!("mods/{mod_name}/main.wasm"));
 						let mod_metadata = asset_server.load(format!("mods/{mod_name}/@mod.dhall"));
 						ProvisionalMod {
 							wasm_binary,
@@ -97,6 +98,10 @@ fn load_mods(
 					&mut *store, &component, &*linker,
 				)
 				.ok()?;
+				info!(
+					"Loaded mod {} - \"{}\"",
+					mod_metadata.name, mod_metadata.description
+				);
 				Some(
 					Mod {
 						bindings,

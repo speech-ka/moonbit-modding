@@ -12,6 +12,11 @@ interface krenel {
 	}
 
 	spawn: func(kind: string, pos: point) -> actor;
+
+	resource transform {
+		get-translation: func() -> tuple<f32, f32, f32>;
+		set-translation: func(x: f32, y: f32, z: f32);
+	}
 }
 
 world fortalice {

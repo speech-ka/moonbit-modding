@@ -20,7 +20,7 @@
 
     rm -rf ../assets/mods/fortalice
     mkdir -p ../assets/mods/fortalice
-    cp component.wasm ../assets/mods/fortalice/component.wasm
+    cp component.wasm ../assets/mods/fortalice/main.wasm
     cp @mod.dhall ../assets/mods/fortalice/@mod.dhall
 
 @fmt-moon:

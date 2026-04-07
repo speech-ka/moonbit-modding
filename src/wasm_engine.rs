@@ -20,6 +20,7 @@ bindgen!({
 	world: "fortalice",
 	with: {
 		"fallow:midden/krenel.actor": Actor,
+		"fallow:midden/krenel.transform": bevy::transform::components::Transform,
 	},
 
 	imports: {
@@ -39,6 +40,7 @@ use crate::wasm_engine::{
 	fallow::midden::krenel::{
 		Host as KrenelHost,
 		HostActor,
+		HostTransform,
 		Point,
 	},
 	wasi::logging::logging::{
@@ -83,6 +85,37 @@ impl KrenelHost for HostState {
 			kind,
 		};
 		Ok(self.table.push(actor)?)
+	}
+}
+
+impl HostTransform for HostState {
+	fn get_translation(
+		&mut self,
+		res: WasmtimeResource<Transform>,
+	) -> Result<(
+		f32,
+		f32,
+		f32,
+	)> {
+		let t = self.table.get(&res)?;
+		Ok((
+			t.translation.x,
+			t.translation.y,
+			t.translation.z,
+		))
+	}
+
+	fn set_translation(&mut self, res: WasmtimeResource<Transform>, x: f32, y: f32, z: f32) -> Result<()> {
+		let t = self.table.get_mut(&res)?;
+		t.translation = bevy::math::Vec3::new(
+			x, y, z,
+		);
+		Ok(())
+	}
+
+	fn drop(&mut self, res: WasmtimeResource<Transform>) -> Result<()> {
+		self.table.delete(res)?;
+		Ok(())
 	}
 }
 
