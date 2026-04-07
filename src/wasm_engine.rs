@@ -1,6 +1,8 @@
 use anyhow::Result;
 use bevy::prelude::*;
 use wasmtime::{
+	Cache,
+	CacheConfig,
 	Config,
 	Engine,
 	Store,
@@ -101,6 +103,7 @@ pub struct WasmEngine {
 pub fn make_wasm_engine() -> Result<WasmEngine> {
 	let mut config = Config::new();
 	config.wasm_component_model(true);
+	config.cache(Some(Cache::new(CacheConfig::new())?));
 	let engine = Engine::new(&config)?;
 	let mut linker = Linker::<HostState>::new(&engine);
 	Fortalice::add_to_linker::<_, HasSelf<_>>(

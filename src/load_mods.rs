@@ -38,7 +38,7 @@ struct ProvisionalMod {
 impl FromWorld for ProvisionalMods {
 	fn from_world(world: &mut World) -> Self {
 		let asset_server = world.resource::<AssetServer>();
-		let mod_names = get_mod_names().unwrap_or(Vec::new());
+		let mod_names = get_mod_names().unwrap_or_default();
 		Self(
 			mod_names
 				.iter()

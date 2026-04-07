@@ -21,10 +21,10 @@
     rm -rf ../assets/mods/fortalice
     mkdir -p ../assets/mods/fortalice
     cp component.wasm ../assets/mods/fortalice/component.wasm
-    cp ./src/@mod.dhall ../assets/mods/fortalice/@mod.dhall
+    cp @mod.dhall ../assets/mods/fortalice/@mod.dhall
 
 @fmt-moon:
-    moon fmt
+    moon fmt --block-style false
 
 [working-directory('../')]
 @fmt-cargo:

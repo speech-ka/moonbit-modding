@@ -3,8 +3,17 @@ name = "moonbit-modding"
 version = "0.1.0"
 edition = "2024"
 
+[dependencies.wasmtime]
+version = "41.0.3"
+default-features = false
+features = [
+	"cranelift",
+	"runtime",
+	"component-model",
+	"cache",
+]
+
 [dependencies]
-wasmtime = "41.0.3"
 anyhow = "1.0"
 thiserror = "2.0.18"
 serde = { version = "1.0.228", features = ["derive"] }
@@ -23,6 +32,10 @@ bevy = { version = "0.18", default-features = false, features = [
 	"bevy_sprite",
 	"bevy_text",
 	"bevy_ui",
+	"bevy_picking",
+	"picking",
+	"ui_picking",
+	"experimental_bevy_ui_widgets",
 	"bevy_winit",
 	"hdr",
 	"png",
