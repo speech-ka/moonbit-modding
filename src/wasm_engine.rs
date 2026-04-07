@@ -26,6 +26,11 @@ bindgen!({
 		"fallow:midden/krenel": trappable,
 	},
 
+	additional_derives: [
+		serde::Serialize,
+		serde::Deserialize,
+	],
+
 /*    imports: {
 		"fallow:midden/krenel.spawn": trappable,
 	},*/
