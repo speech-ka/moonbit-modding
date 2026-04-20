@@ -1,26 +1,772 @@
-package fallow:midden;
+package fallow:midden@0.1.0;
 
-interface krenel {
-	record point {
-		x: s32,
-		y: s32
-	}
+// ═══════════════════════════════════════════════════════════════════════════
+//  Primitive math types
+//  These mirror Bevy's glam types faithfully.
+// ═══════════════════════════════════════════════════════════════════════════
 
-	resource actor {
-		get-position: func() -> point;
-		set-position: func(pos: point);
-	}
+interface types {
 
-	spawn: func(kind: string, pos: point) -> actor;
+    /// Bevy Vec2 — 2D vector or size.
+    record vec2 {
+        x: f32,
+        y: f32,
+    }
 
-	resource transform {
-		get-translation: func() -> tuple<f32, f32, f32>;
-		set-translation: func(x: f32, y: f32, z: f32);
-	}
+    /// Bevy Vec3 — 3D vector, position, scale, etc.
+    record vec3 {
+        x: f32,
+        y: f32,
+        z: f32,
+    }
+
+    /// Bevy Vec4 / linear RGBA colour.
+    record vec4 {
+        x: f32,
+        y: f32,
+        z: f32,
+        w: f32,
+    }
+
+    /// Bevy Quat — unit quaternion rotation.
+    record quat {
+        x: f32,
+        y: f32,
+        z: f32,
+        w: f32,
+    }
+
+    /// Linear-light RGBA colour (matches Bevy's `LinearRgba`).
+    /// All components in [0, ∞) — values above 1 are HDR.
+    record color {
+        red:   f32,
+        green: f32,
+        blue:  f32,
+        alpha: f32,
+    }
+
+    /// SRGBA colour (matches Bevy's `Srgba`, used in Sprite etc.).
+    record srgba {
+        red:   f32,
+        green: f32,
+        blue:  f32,
+        alpha: f32,
+    }
+
+    /// An entity identifier.
+    record entity-id {
+        /// Packed Bevy entity bits (index + generation).
+        bits: u64,
+    }
+
+    // ── Opaque asset handles ─────────────────────────────────────────────
+    // These are IDs the host resolves.  Mods receive them from query results
+    // or create them via the asset-server interface below.
+
+    record mesh-handle     { id: u64 }
+    record material-handle { id: u64 }
+    record image-handle    { id: u64 }
+    record audio-handle    { id: u64 }
+    record scene-handle    { id: u64 }
+    record animation-handle { id: u64 }
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+//  Spatial / transform
+// ═══════════════════════════════════════════════════════════════════════════
+
+interface spatial {
+    use types.{vec3, quat};
+
+    /// Mirrors Bevy's `Transform`.
+    /// GlobalTransform is read-only and derived; mods never write it.
+    record transform {
+        translation: vec3,
+        rotation:    quat,
+        scale:       vec3,
+    }
+
+    /// Visibility user-toggle. Mirrors Bevy's `Visibility` enum.
+    enum visibility {
+        /// Show/hide based on parent (default).
+        inherited,
+        /// Always visible regardless of parent.
+        visible,
+        /// Always hidden regardless of parent.
+        hidden,
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  Rendering — 3D
+// ═══════════════════════════════════════════════════════════════════════════
+
+interface render3d {
+    use types.{color, vec3, mesh-handle, material-handle};
+
+    /// Mirrors Bevy's `Mesh3d` component.
+    record mesh3d {
+        mesh: mesh-handle,
+    }
+
+    /// Alpha blend mode. Mirrors Bevy's `AlphaMode`.
+    enum alpha-mode {
+        opaque,
+        mask,   // uses alpha-cutoff
+        blend,
+        add,
+        multiply,
+        premultiplied,
+    }
+
+    /// Mirrors Bevy's `StandardMaterial` (subset of authored fields).
+    /// Emissive is in linear-light space; values > 1 produce HDR bloom.
+    record standard-material {
+        base-color:        color,
+        emissive:          color,  // HDR — (r,g,b,1.0) typical, r>1 for glow
+        metallic:          f32,    // [0, 1]
+        roughness:         f32,    // [0, 1] (perceptual)
+        reflectance:       f32,    // [0, 1], ~0.5 for dielectric
+        alpha-mode:        alpha-mode,
+        alpha-cutoff:      f32,    // only used when alpha-mode = mask
+        unlit:             bool,
+        double-sided:      bool,
+        fog-enabled:       bool,
+        // Optional texture handles (none = not assigned)
+        base-color-texture:  option<mesh-handle>,  // image handle repurposed
+        emissive-texture:    option<mesh-handle>,
+        normal-map-texture:  option<mesh-handle>,
+    }
+
+    /// Mirrors Bevy's `MeshMaterial3d<StandardMaterial>` component.
+    record mesh-material3d {
+        material: material-handle,
+    }
+
+    /// Mirrors Bevy's `NotShadowCaster` marker — present = no shadow cast.
+    record not-shadow-caster {}
+
+    /// Mirrors Bevy's `NotShadowReceiver` marker — present = no shadow receive.
+    record not-shadow-receiver {}
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  Rendering — 2D sprites
+// ═══════════════════════════════════════════════════════════════════════════
+
+interface render2d {
+    use types.{srgba, vec2, image-handle};
+
+    /// Sprite anchor point.  Mirrors Bevy's `Anchor`.
+    enum anchor {
+        center,
+        bottom-left,
+        bottom-center,
+        bottom-right,
+        center-left,
+        center-right,
+        top-left,
+        top-center,
+        top-right,
+    }
+
+    /// Rectangle in pixel-space for atlas slicing.
+    record rect {
+        min: vec2,
+        max: vec2,
+    }
+
+    /// Mirrors Bevy's `Sprite` component (as of 0.15+ Required Components style).
+    /// After 0.15 SpriteBundle is deprecated; Sprite is the single component.
+    record sprite {
+        image:       image-handle,
+        color:       srgba,
+        /// Override rendered size in world units. none = use image size.
+        custom-size: option<vec2>,
+        flip-x:      bool,
+        flip-y:      bool,
+        anchor:      anchor,
+        /// Sub-region of the texture. none = full image.
+        rect:        option<rect>,
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  Lighting  (Bevy 0.17/0.18 field-accurate)
+// ═══════════════════════════════════════════════════════════════════════════
+
+interface lighting {
+    use types.{color};
+
+    /// Mirrors Bevy's `PointLight`.
+    /// intensity = luminous power in lumens.
+    record point-light {
+        color:            color,
+        intensity:        f32,   // lumens; typical lamp ≈ 800 lm
+        range:            f32,   // world-unit radius of influence
+        radius:           f32,   // physical source radius (affects specular)
+        shadows-enabled:  bool,
+        shadow-depth-bias:  f32,
+        shadow-normal-bias: f32,
+    }
+
+    /// Mirrors Bevy's `SpotLight`.
+    /// Direction is taken from the entity's Transform (forward).
+    record spot-light {
+        color:             color,
+        intensity:         f32,
+        range:             f32,
+        radius:            f32,
+        shadows-enabled:   bool,
+        shadow-depth-bias:  f32,
+        shadow-normal-bias: f32,
+        /// Outer cone half-angle in radians. Must be < π/2.
+        outer-angle:       f32,
+        /// Inner cone half-angle in radians. Light is full inside this angle.
+        inner-angle:       f32,
+    }
+
+    /// Mirrors Bevy's `DirectionalLight`.
+    /// illuminance = lux (lumens/m²). Direct sunlight ≈ 100 000 lux.
+    record directional-light {
+        color:            color,
+        illuminance:      f32,
+        shadows-enabled:  bool,
+        shadow-depth-bias:  f32,
+        shadow-normal-bias: f32,
+    }
+
+    /// Mirrors Bevy's `AmbientLight` (world resource, not per-entity).
+    record ambient-light {
+        color:      color,
+        brightness: f32,  // linear multiplier
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  Camera
+// ═══════════════════════════════════════════════════════════════════════════
+
+interface camera {
+    use types.{color, vec2};
+
+    enum projection-kind {
+        perspective,
+        orthographic,
+    }
+
+    /// Mirrors Bevy's `Camera` component (mod-relevant subset).
+    record camera-info {
+        projection:  projection-kind,
+        /// Field of view in radians (only meaningful for perspective).
+        fov:         f32,
+        /// Near clipping plane.
+        near:        f32,
+        /// Far clipping plane (0 = infinite).
+        far:         f32,
+        /// Background clear colour.
+        clear-color: color,
+        /// Whether this camera is active.
+        is-active:   bool,
+        /// HDR mode.
+        hdr:         bool,
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  Physics  (Avian3d / Avian2d naming conventions)
+// ═══════════════════════════════════════════════════════════════════════════
+
+interface physics {
+    use types.{vec3};
+
+    /// Rigid body simulation mode. Mirrors Avian's `RigidBody` enum.
+    enum rigid-body-kind {
+        /// Fully simulated — affected by forces and collisions.
+        dynamic,
+        /// Infinite mass — moves only via direct Transform writes.
+        kinematic,
+        /// Never moves — provides collision surface only.
+        %static,
+    }
+
+    /// The collider shape for an entity.
+    /// The host constructs the actual Avian Collider from this.
+    variant collider-shape {
+        /// Axis-aligned box. half-extents in world units.
+        cuboid(vec3),
+        /// Sphere by radius.
+        sphere(f32),
+        /// Upright capsule: radius + total height.
+        capsule(tuple<f32, f32>),
+        /// Upright cylinder: radius + height.
+        cylinder(tuple<f32, f32>),
+        /// Convex hull of the entity's mesh (expensive, cached).
+        convex-hull,
+    }
+
+    record rigid-body     { kind: rigid-body-kind }
+    record linear-velocity  { value: vec3 }
+    record angular-velocity { value: vec3 }
+
+    /// Mirrors Avian's `ExternalForce`.
+    record external-force  { force: vec3, persistent: bool }
+    /// Mirrors Avian's `ExternalTorque`.
+    record external-torque { torque: vec3, persistent: bool }
+    /// Mirrors Avian's `GravityScale`.
+    record gravity-scale   { scale: f32 }
+    /// Mirrors Avian's `Friction`.
+    record friction        { dynamic-coefficient: f32, static-coefficient: f32 }
+    /// Mirrors Avian's `Restitution` (bounciness).
+    record restitution     { coefficient: f32 }
+    /// Mirrors Avian's `Mass`.
+    record mass            { value: f32 }
+    /// Marks an entity as a sensor (detects overlap, no collision response).
+    record sensor          {}
+    /// Mirrors Avian's `LockedAxes` — packed bitmask.
+    /// Bit 0 = lock-X-trans, 1 = Y, 2 = Z, 3 = lock-X-rot, 4 = Y, 5 = Z.
+    record locked-axes     { bits: u8 }
+
+    /// A single collision contact reported to the mod.
+    record collision-contact {
+        other:          %entity-id,
+        point:          vec3,
+        normal:         vec3,
+        penetration:    f32,
+        relative-speed: f32,
+    }
+}
+
+interface audio {
+    use types.{audio-handle};
+
+    enum playback-mode {
+        once,
+        %loop,
+        repeat,
+    }
+
+    record playback-settings {
+        mode:    playback-mode,
+        volume:  f32,
+        speed:   f32,
+        paused:  bool,
+    }
+
+    record audio-player {
+        source:   audio-handle,
+        settings: playback-settings,
+    }
+
+    record spatial-listener {}
+}
+
+interface hierarchy {
+    use types.{entity-id};
+
+    record parent-info  { parent: entity-id }
+    record children-info { children: list<entity-id> }
+}
+
+interface names {
+    record name { value: string }
+}
+
+interface game-components {
+    use types.{entity-id, vec3};
+
+    record health {
+        current: f32,
+        maximum: f32,
+    }
+
+    record armor {
+        value:      f32,
+        flat-reduction: f32,
+    }
+
+    record damage-event {
+        source:    option<entity-id>,
+        amount:    f32,
+        knockback: vec3,
+    }
+
+    enum damage-type { physical, fire, cold, lightning, poison, arcane }
+
+    record elemental-resistance {
+        fire:      f32,
+        cold:      f32,
+        lightning: f32,
+        poison:    f32,
+        arcane:    f32,
+    }
+
+    record character-stats {
+        move-speed:   f32,
+        jump-height:  f32,
+        sprint-scale: f32,
+        air-control:  f32,
+    }
+
+    enum faction { player, ally, enemy, neutral }
+
+    record team { faction: faction }
+
+    enum item-rarity { common, uncommon, rare, epic, legendary }
+
+    record item-stack {
+        item-id:  string,
+        quantity: u32,
+        rarity:   item-rarity,
+    }
+
+    record inventory {
+        capacity: u32,
+        slots:    list<option<item-stack>>,
+    }
+
+    enum ai-state {
+        idle,
+        patrolling,
+        chasing,
+        attacking,
+        fleeing,
+        dead,
+        stunned,
+    }
+
+    record ai-agent {
+        state:           ai-state,
+        target:          option<entity-id>,
+        detection-range: f32,
+        attack-range:    f32,
+        threat:          f32,
+    }
+
+    enum status-kind {
+        burning,
+        frozen,
+        stunned,
+        poisoned,
+        slowed,
+        hasted,
+        shielded,
+        invisible,
+    }
+
+    record status-effect {
+        kind:             status-kind,
+        duration:         f32,
+        magnitude:        f32,
+        source:           option<entity-id>,
+    }
+
+    record status-effects {
+        effects: list<status-effect>,
+    }
+
+    record projectile {
+        owner:     entity-id,
+        damage:    f32,
+        damage-type: damage-type,
+        lifetime:  f32,
+        piercing:  bool,
+    }
+
+    record loot-table-entry {
+        item-id:      string,
+        weight:       f32,
+        min-quantity: u32,
+        max-quantity: u32,
+        min-rarity:   item-rarity,
+    }
+
+    record loot-table {
+        entries: list<loot-table-entry>,
+        rolls:   u32,
+    }
+
+    record spawner {
+        kind:           string,
+        max-alive:      u32,
+        interval:       f32,
+        time-until-next: f32,
+        radius:         f32,
+        active:         bool,
+    }
+
+    enum trigger-filter { any-entity, player-only, enemies-only }
+
+    record trigger-volume {
+        filter:    trigger-filter,
+        one-shot:  bool,
+        tag:       string,
+    }
+
+    record checkpoint {
+        id:       string,
+        activated: bool,
+    }
+
+    record interactable {
+        prompt:      string,
+        range:       f32,
+        action-tag:  string,
+        enabled:     bool,
+    }
+}
+
+interface world-api {
+    use types.{entity-id, vec3, audio-handle, image-handle,
+               mesh-handle, material-handle, scene-handle};
+    use spatial.{transform, visibility};
+    use render3d.{mesh3d, mesh-material3d, standard-material, not-shadow-caster};
+    use render2d.{sprite};
+    use lighting.{point-light, spot-light, directional-light, ambient-light};
+    use camera.{camera-info};
+    use physics.{rigid-body, collider-shape, linear-velocity, angular-velocity,
+                 external-force, external-torque, gravity-scale, friction,
+                 restitution, mass, sensor, locked-axes, collision-contact};
+    use audio.{audio-player, playback-settings};
+    use hierarchy.{parent-info, children-info};
+    use names.{name};
+    use game-components.{
+        health, armor, character-stats, team, faction, ai-agent, ai-state,
+        inventory, item-stack, status-effects, status-effect, status-kind,
+        projectile, loot-table, spawner, trigger-volume, checkpoint,
+        interactable, elemental-resistance, damage-event,
+    };
+
+    spawn:         func(name: string) -> entity-id;
+    spawn-scene:   func(scene: scene-handle) -> entity-id;
+    despawn:       func(e: entity-id);
+    is-alive:      func(e: entity-id) -> bool;
+
+    get-transform:  func(e: entity-id) -> option<transform>;
+    set-transform:  func(e: entity-id, t: transform);
+    get-visibility: func(e: entity-id) -> option<visibility>;
+    set-visibility: func(e: entity-id, v: visibility);
+
+    get-name: func(e: entity-id) -> option<name>;
+    set-name: func(e: entity-id, n: name);
+
+    get-mesh3d:          func(e: entity-id) -> option<mesh3d>;
+    set-mesh3d:          func(e: entity-id, m: mesh3d);
+    get-mesh-material3d: func(e: entity-id) -> option<mesh-material3d>;
+    set-mesh-material3d: func(e: entity-id, m: mesh-material3d);
+    get-standard-material: func(h: material-handle) -> option<standard-material>;
+    set-standard-material: func(h: material-handle, m: standard-material);
+    set-not-shadow-caster: func(e: entity-id, enabled: bool);
+
+    get-sprite: func(e: entity-id) -> option<sprite>;
+    set-sprite: func(e: entity-id, s: sprite);
+
+    get-point-light:       func(e: entity-id) -> option<point-light>;
+    set-point-light:       func(e: entity-id, l: point-light);
+    get-spot-light:        func(e: entity-id) -> option<spot-light>;
+    set-spot-light:        func(e: entity-id, l: spot-light);
+    get-directional-light: func(e: entity-id) -> option<directional-light>;
+    set-directional-light: func(e: entity-id, l: directional-light);
+    get-ambient-light:     func() -> ambient-light;
+    set-ambient-light:     func(l: ambient-light);
+
+    get-camera:            func(e: entity-id) -> option<camera-info>;
+    set-camera:            func(e: entity-id, c: camera-info);
+    get-primary-camera:    func() -> option<entity-id>;
+
+    get-rigid-body:       func(e: entity-id) -> option<rigid-body>;
+    set-rigid-body:       func(e: entity-id, rb: rigid-body);
+    add-collider:         func(e: entity-id, shape: collider-shape);
+    remove-collider:      func(e: entity-id);
+    get-linear-velocity:  func(e: entity-id) -> option<linear-velocity>;
+    set-linear-velocity:  func(e: entity-id, v: linear-velocity);
+    get-angular-velocity: func(e: entity-id) -> option<angular-velocity>;
+    set-angular-velocity: func(e: entity-id, v: angular-velocity);
+    apply-impulse:        func(e: entity-id, impulse: vec3);
+    apply-angular-impulse: func(e: entity-id, impulse: vec3);
+    get-gravity-scale:    func(e: entity-id) -> option<gravity-scale>;
+    set-gravity-scale:    func(e: entity-id, g: gravity-scale);
+    get-friction:         func(e: entity-id) -> option<friction>;
+    set-friction:         func(e: entity-id, f: friction);
+    get-restitution:      func(e: entity-id) -> option<restitution>;
+    set-restitution:      func(e: entity-id, r: restitution);
+    get-mass:             func(e: entity-id) -> option<mass>;
+    set-mass:             func(e: entity-id, m: mass);
+    set-sensor:           func(e: entity-id, is-sensor: bool);
+    get-locked-axes:      func(e: entity-id) -> option<locked-axes>;
+    set-locked-axes:      func(e: entity-id, a: locked-axes);
+
+    raycast:              func(origin: vec3, direction: vec3, max-dist: f32)
+                              -> option<tuple<entity-id, vec3>>;
+
+    play-sound:     func(source: audio-handle, settings: playback-settings)
+                        -> entity-id;
+    play-sound-at:  func(source: audio-handle, settings: playback-settings,
+                         pos: vec3) -> entity-id;
+    stop-sound:     func(e: entity-id);
+
+    get-parent:        func(e: entity-id) -> option<entity-id>;
+    get-children:      func(e: entity-id) -> list<entity-id>;
+    set-parent:        func(child: entity-id, parent: entity-id);
+    remove-parent:     func(child: entity-id);
+
+    get-health:       func(e: entity-id) -> option<health>;
+    set-health:       func(e: entity-id, h: health);
+    deal-damage:      func(e: entity-id, ev: damage-event);
+    heal:             func(e: entity-id, amount: f32);
+
+    get-armor:        func(e: entity-id) -> option<armor>;
+    set-armor:        func(e: entity-id, a: armor);
+
+    get-elemental-resistance: func(e: entity-id) -> option<elemental-resistance>;
+    set-elemental-resistance: func(e: entity-id, r: elemental-resistance);
+
+    get-character-stats: func(e: entity-id) -> option<character-stats>;
+    set-character-stats: func(e: entity-id, s: character-stats);
+
+    get-team:            func(e: entity-id) -> option<team>;
+    set-team:            func(e: entity-id, t: team);
+
+    get-ai-agent:        func(e: entity-id) -> option<ai-agent>;
+    set-ai-agent:        func(e: entity-id, a: ai-agent);
+
+    get-status-effects:  func(e: entity-id) -> option<status-effects>;
+    add-status-effect:   func(e: entity-id, fx: status-effect);
+    remove-status-effect: func(e: entity-id, kind: status-kind);
+
+    get-inventory:       func(e: entity-id) -> option<inventory>;
+    give-item:           func(e: entity-id, item: item-stack) -> bool;
+    remove-item:         func(e: entity-id, item-id: string, quantity: u32) -> bool;
+
+    get-projectile:      func(e: entity-id) -> option<projectile>;
+    set-projectile:      func(e: entity-id, p: projectile);
+
+    get-loot-table:      func(e: entity-id) -> option<loot-table>;
+    set-loot-table:      func(e: entity-id, lt: loot-table);
+
+    get-spawner:         func(e: entity-id) -> option<spawner>;
+    set-spawner:         func(e: entity-id, s: spawner);
+
+    get-interactable:    func(e: entity-id) -> option<interactable>;
+    set-interactable:    func(e: entity-id, i: interactable);
+
+    query-all-with-health: func() -> list<entity-id>;
+    query-faction:         func(f: faction) -> list<entity-id>;
+    query-in-radius:       func(center: vec3, radius: f32) -> list<entity-id>;
+    query-by-name:         func(n: string) -> list<entity-id>;
+
+    load-image:     func(path: string) -> image-handle;
+    load-audio:     func(path: string) -> audio-handle;
+    load-scene:     func(path: string) -> scene-handle;
+    create-material: func(m: standard-material) -> material-handle;
+
+    time-elapsed:   func() -> f64;
+    time-delta:     func() -> f32;
+
+    log-trace: func(msg: string);
+    log-info:  func(msg: string);
+    log-warn:  func(msg: string);
+    log-error: func(msg: string);
+}
+
+interface lifecycle {
+    use game-components.{damage-event, damage-type};
+
+    /// Called once after the mod is loaded.
+    /// Return false to abort (e.g. incompatible game version).
+    on-load:   func() -> bool;
+    /// Called when the mod is unloaded.
+    on-unload: func();
+}
+
+interface mod-manifest {
+    use types.{entity-id, vec3};
+    use game-components.{status-kind, trigger-volume, item-stack, faction};
+    use physics.{collision-contact};
+
+    /// Returned by the host once after on-load to decide which hooks to wire.
+    record subscriptions {
+        // Frame hooks
+        on-update:            bool,
+        on-fixed-update:      bool,
+        // Entity lifetime
+        on-entity-spawned:    bool,
+        on-entity-despawned:  bool,
+        // Physics
+        on-collision:         bool,
+        on-collision-started: bool,
+        on-collision-ended:   bool,
+        // Game events
+        on-entity-died:       bool,
+        on-damage-dealt:      bool,
+        on-status-applied:    bool,
+        on-item-picked-up:    bool,
+        on-trigger-entered:   bool,
+        on-trigger-exited:    bool,
+        on-checkpoint-reached: bool,
+        on-interact:          bool,
+        // Input
+        on-key-pressed:       bool,
+        on-key-released:      bool,
+        on-mouse-clicked:     bool,
+        on-mouse-moved:       bool,
+        on-gamepad-button:    bool,
+    }
+
+    get-subscriptions: func() -> subscriptions;
+}
+
+interface frame-hooks {
+    /// Variable-rate update. dt = frame delta in seconds.
+    on-update:       func(dt: f32);
+    /// Fixed-rate physics step. dt = fixed timestep (typically 1/60 s).
+    on-fixed-update: func(dt: f32);
+}
+
+interface entity-events {
+    use types.{entity-id};
+    use game-components.{damage-event, damage-type, status-kind, item-stack,
+                         trigger-volume, faction};
+    use physics.{collision-contact};
+
+    on-entity-spawned:    func(e: entity-id, kind: string);
+    on-entity-despawned:  func(e: entity-id);
+    on-entity-died:       func(e: entity-id, killer: option<entity-id>);
+    on-damage-dealt:      func(target: entity-id, ev: damage-event,
+                               actual-dealt: f32);
+    on-status-applied:    func(target: entity-id, kind: status-kind);
+    on-item-picked-up:    func(e: entity-id, item: item-stack);
+    on-collision:         func(a: entity-id, b: entity-id,
+                               contact: collision-contact);
+    on-collision-started: func(a: entity-id, b: entity-id);
+    on-collision-ended:   func(a: entity-id, b: entity-id);
+    on-trigger-entered:   func(trigger: entity-id, actor: entity-id, tag: string);
+    on-trigger-exited:    func(trigger: entity-id, actor: entity-id, tag: string);
+    on-checkpoint-reached: func(actor: entity-id, checkpoint-id: string);
+    on-interact:          func(actor: entity-id, target: entity-id, action-tag: string);
+}
+
+interface input-events {
+    on-key-pressed:    func(key: string);
+    on-key-released:   func(key: string);
+    on-mouse-clicked:  func(x: f32, y: f32, button: u8);
+    on-mouse-moved:    func(delta-x: f32, delta-y: f32);
+    on-gamepad-button: func(gamepad-id: u32, button: string, pressed: bool);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  The world
+// ═══════════════════════════════════════════════════════════════════════════
+
 world fortalice {
-	import krenel;
-	import wasi:logging/logging@0.1.0;
-	export on-update: func(dt: f32);
+    // ── Host → guest (what mods can call) ──────────────────────────────
+    import world-api;
+    import wasi:logging/logging@0.1.0;
+
+    // ── Guest → host (what mods must export, with SDK defaults) ────────
+    export lifecycle;
+    export mod-manifest;
+    export frame-hooks;
+    export entity-events;
+    export input-events;
 }
